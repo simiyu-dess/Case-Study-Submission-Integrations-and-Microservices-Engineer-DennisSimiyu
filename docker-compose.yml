@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-countryinfo}
+      # The app connects as a least-privilege user, so MySQL must actually create it.
+      MYSQL_USER: ${DB_USERNAME:-service}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-servicepassword}
+    # The app reaches MySQL over the compose network, so publishing is only for local
+    # debugging. Bound to loopback, and the host port defaults to 3307 to avoid clashing
+    # with a MySQL already running on the host. Override with MYSQL_HOST_PORT.
+    ports: ["127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Authenticate as the application user so the check only passes once
+      # MYSQL_USER/MYSQL_DATABASE have been provisioned by the entrypoint.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME:-service}", "-p${DB_PASSWORD:-servicepassword}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-countryinfo}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${DB_USERNAME:-service}
+      DB_PASSWORD: ${DB_PASSWORD:-servicepassword}
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+    ports: ["${APP_HOST_PORT:-8080}:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

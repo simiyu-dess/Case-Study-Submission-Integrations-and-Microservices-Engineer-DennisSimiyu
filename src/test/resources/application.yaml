@@ -1,0 +1,2 @@
+# Intentionally empty. Test overrides live in application-test.yaml (profile "test").
+# Delete this file: a same-named file here shadows src/main/resources/application.yaml.

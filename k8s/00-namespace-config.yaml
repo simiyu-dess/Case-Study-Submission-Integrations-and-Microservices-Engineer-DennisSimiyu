@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: countryinfo
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: countryinfo-db
+  namespace: countryinfo
+type: Opaque
+stringData:
+  # CHANGE in real environments (use sealed-secrets / external secrets manager)
+  MYSQL_ROOT_PASSWORD: change-me-root
+  DB_USERNAME: countryinfo
+  DB_PASSWORD: change-me
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: countryinfo-config
+  namespace: countryinfo
+data:
+  DB_URL: jdbc:mysql://mysql:3306/countryinfo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  SOAP_ENDPOINT: http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso
+  SOAP_CONNECT_TIMEOUT: 3s
+  SOAP_READ_TIMEOUT: 5s
+  SOAP_MAX_ATTEMPTS: "3"
+  SOAP_CB_FAILURE_THRESHOLD: "5"
+  SOAP_CB_OPEN_DURATION: 30s
+  DB_POOL_SIZE: "10"
+  LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+  APP_LOG_LEVEL: INFO
+  # Flip to DEBUG (kubectl set env / edit) to log full SOAP payloads while troubleshooting.
+  SOAP_LOG_LEVEL: INFO
